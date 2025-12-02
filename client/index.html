@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h3>Discord Chat</h3>
+
+    <div id="messages"></div>
+
+    <input id="msg" placeholder="Type message..." />
+    <button onclick="sendMsg()">Send</button>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+      const socket = io("YOUR_BACKEND_URL");
+
+      socket.on("chat-message", (msg) => {
+        let m = document.createElement("div");
+        m.innerText = msg;
+        document.body.appendChild(m);
+      });
+
+      function sendMsg() {
+        const text = document.getElementById("msg").value;
+        socket.emit("chat-message", text);
+      }
+    </script>
+  </body>
+</html>
