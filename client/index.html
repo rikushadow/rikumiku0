@@ -16,6 +16,20 @@
     h3 {
       color: #7289da;
     }
+    #channels {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .channel {
+      padding: 5px 10px;
+      margin-right: 5px;
+      background-color: #2f3136;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .channel.active {
+      background-color: #7289da;
+    }
     #messages {
       width: 400px;
       height: 400px;
@@ -26,8 +40,15 @@
       background-color: #2f3136;
       border-radius: 5px;
     }
+    #username {
+      width: 120px;
+      padding: 5px;
+      border-radius: 3px;
+      border: none;
+      margin-right: 5px;
+    }
     #msg {
-      width: 300px;
+      width: 250px;
       padding: 5px;
       border-radius: 3px;
       border: none;
@@ -45,47 +66,108 @@
       background-color: #5b6eae;
     }
     .message {
-      margin-bottom: 5px;
-      padding: 5px;
+      margin-bottom: 8px;
       background-color: #40444b;
-      border-radius: 3px;
+      padding: 5px;
+      border-radius: 5px;
+    }
+    .msg-username {
+      font-weight: bold;
+      color: #00b0f4;
+    }
+    .msg-timestamp {
+      font-size: 0.7em;
+      color: #b9bbbe;
+      float: right;
     }
   </style>
 </head>
 <body>
   <h3>Discord Chat Clone</h3>
+
+  <!-- Channels -->
+  <div id="channels">
+    <div class="channel active" data-channel="general">#general</div>
+    <div class="channel" data-channel="gaming">#gaming</div>
+    <div class="channel" data-channel="random">#random</div>
+  </div>
+
+  <!-- Chat Messages -->
   <div id="messages"></div>
+
+  <!-- Input -->
   <div>
+    <input id="username" placeholder="Username" />
     <input id="msg" placeholder="Type a message..." />
     <button onclick="sendMsg()">Send</button>
   </div>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
-    // 🔹 CHANGE THIS TO YOUR BACKEND URL
     const socket = io("https://rikumiku0.onrender.com");
 
+    let currentChannel = "general";
     const messagesDiv = document.getElementById("messages");
     const input = document.getElementById("msg");
+    const usernameInput = document.getElementById("username");
 
-    socket.on("chat-message", (msg) => {
-      const m = document.createElement("div");
-      m.className = "message";
-      m.innerText = msg;
-      messagesDiv.appendChild(m);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight; // auto scroll
+    // Handle channel switching
+    document.querySelectorAll('.channel').forEach(channel => {
+      channel.addEventListener('click', () => {
+        currentChannel = channel.dataset.channel;
+        document.querySelectorAll('.channel').forEach(c => c.classList.remove('active'));
+        channel.classList.add('active');
+        messagesDiv.innerHTML = ""; // Clear messages when switching channels
+      });
+    });
+
+    // Listen for incoming messages
+    socket.on("chat-message", (data) => {
+      if (data.channel !== currentChannel) return; // show messages only for the current channel
+
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "message";
+
+      const usernameDiv = document.createElement("span");
+      usernameDiv.className = "msg-username";
+      usernameDiv.innerText = data.username || "Anonymous";
+
+      const timestampDiv = document.createElement("span");
+      timestampDiv.className = "msg-timestamp";
+      timestampDiv.innerText = data.timestamp;
+
+      const textDiv = document.createElement("div");
+      textDiv.innerText = data.text;
+
+      msgDiv.appendChild(usernameDiv);
+      msgDiv.appendChild(timestampDiv);
+      msgDiv.appendChild(textDiv);
+
+      messagesDiv.appendChild(msgDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
     function sendMsg() {
       const text = input.value.trim();
-      if (text === "") return;
-      socket.emit("chat-message", text);
+      let username = usernameInput.value.trim() || "Anonymous";
+
+      if (!text) return;
+
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      socket.emit("chat-message", {
+        username,
+        text,
+        timestamp,
+        channel: currentChannel
+      });
+
       input.value = "";
     }
 
-    // Optional: send message on Enter key
     input.addEventListener("keypress", (e) => {
       if (e.key === "Enter") sendMsg();
     });
   </script>
 </body>
+</html>
